@@ -57,10 +57,16 @@
   (do-this-now-setup-next-alert))
 
 (defun do-this-now-start-timer-for-next-alert ()
+  "Schedule the next alert.
+If a scheduled alert exists, this function cancels it and
+restarts the timer."
+  (interactive)
   (when do-this-now--timer
     (cancel-timer do-this-now--timer))
   (setq do-this-now--timer
         (run-with-timer do-this-now-interval nil #'do-this-now-alert)))
+
+(defalias 'do-this-now-restart 'do-this-now-start-timer-for-next-alert)
 
 (defun do-this-now--hook ()
   (do-this-now-start-timer-for-next-alert)
