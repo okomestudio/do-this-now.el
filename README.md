@@ -33,3 +33,4 @@ control over how the message is displayed.
 ## TODOs
 
 - [ ] Look for a solution to display notification more prominently in GUI
+- [ ] Allow multiple notifications to be set up
