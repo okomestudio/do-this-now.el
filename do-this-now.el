@@ -6,7 +6,7 @@
 ;; URL: https://github.com/okomestudio/do-this-now.el
 ;; Version: 2.1
 ;; Keywords: convenience notification message
-;; Package-Requires: ((emacs "29.1") (alert "1.2"))
+;; Package-Requires: ((emacs "29.1") (alert "1.2") (log4e "0.4.1"))
 ;;
 ;;; License:
 ;;
@@ -27,18 +27,21 @@
 ;;
 ;; A very minimal notification scheduler for Emacs.
 ;;
+;; To enable logging, call `do-this-now--log-enable-logging'. If
+;; anything has logged, they can be viewed by
+;; `do-this-now--log-open-log'.
+;;
 ;;; Code:
 
 (require 'alert)
+(require 'log4e)
+
+(log4e:deflogger "do-this-now" "%t [%l] %m" "%H:%M:%S")
 
 (defgroup do-this-now nil
   "Group for `do-this-now'."
   :group 'emacs
   :prefix "do-this-now-")
-
-(defcustom do-this-now-debug nil
-  "When non-nil, display debug messages."
-  :group 'do-this-now)
 
 (defcustom do-this-now-active-status-hook 'post-command-hook
   "Hook to use for user activity.
@@ -75,12 +78,12 @@ command invocation should detect user activity."
 (defvar do-this-now--idle-handler-check-interval 60
   "Idle handler check interval.")
 
-(defun do-this-now--message (format-string &rest args)
-  "Display a debug message.
-The verbosity is set by `do-this-now-debug'. See the documentation for
-`message' about what FORMAT-STRING and ARGS mean."
-  (when do-this-now-debug
-    (apply #'message `(,(concat "do-this-now: " format-string) ,@args))))
+;; (defun do-this-now--message (format-string &rest args)
+;;   "Display a debug message.
+;; The verbosity is set by `do-this-now-debug'. See the documentation for
+;; `message' about what FORMAT-STRING and ARGS mean."
+;;   (when do-this-now-debug
+;;     (apply #'message `(,(concat "do-this-now: " format-string) ,@args))))
 
 (defun do-this-now--cancel-idle-handler ()
   "Cancel the currently active idle handler."
@@ -99,12 +102,12 @@ The verbosity is set by `do-this-now-debug'. See the documentation for
   (do-this-now--cancel-idle-handler)
   (let* ((now (float-time))
          (dt (- now (or do-this-now--last-user-activity now))))
-    (do-this-now--message "Idle for %f sec" dt)
+    (do-this-now--log-debug "Idle for %f sec" dt)
     (if (< dt do-this-now-idle-interval)
         (setq do-this-now--timer-idle-handler
               (run-with-timer do-this-now--idle-handler-check-interval nil
                               #'do-this-now--cancel-scheduled-alert-if-idle))
-      (do-this-now--message "Cancel scheduled alert due to idleness")
+      (do-this-now--log-info "Cancel scheduled alert due to idleness")
       (do-this-now--cancel-scheduled-alert)
       (do-this-now--start-timer-on-next-activity))))
 
@@ -118,8 +121,8 @@ timer."
     (do-this-now-alert)
     (do-this-now--start-timer-on-next-activity))
 
-  (do-this-now--message "Schedule alert to trigger in %f sec"
-                        do-this-now-interval)
+  (do-this-now--log-info "Schedule alert to trigger in %f sec"
+                         do-this-now-interval)
   (setq do-this-now--timer
         (run-with-timer do-this-now-interval nil
                         #'do-this-now--trigger-scheduled-alert))
@@ -133,7 +136,7 @@ timer."
 
 (defun do-this-now--start-timer-on-next-activity ()
   "Set up hook to start timer on the next activity."
-  (do-this-now--message "Schedule alert on next user activity")
+  (do-this-now--log-info "Schedule alert on next user activity")
   (add-hook do-this-now-active-status-hook #'do-this-now--hook))
 
 (defun do-this-now--last-user-activity-set ()
@@ -145,7 +148,7 @@ timer."
 (defun do-this-now-alert ()
   "Trigger an alert right now and set up the next one."
   (interactive)
-  (do-this-now--message "Make an alert titled %s" do-this-now-title)
+  (do-this-now--log-info "Make an alert titled %s" do-this-now-title)
   (alert do-this-now-message :title do-this-now-title :severity 'high))
 
 (defalias 'do-this-now-reschedule #'do-this-now--schedule-next-alert)
